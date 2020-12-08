@@ -221,6 +221,30 @@ function ENT:CreateIllusuion(pos, ang, mdl)
     end)
 end
 
+function ENT:TeleportIfValid(v)
+    local portal = self:GetLinkedPortal()
+
+    if IsValid(portal) then
+        if not v:IsPlayer() then
+            local entsize = (v:OBBMaxs() - v:OBBMins()):Length() / 2
+            local portalsize = (self:OBBMaxs() - self:OBBMins()):Length()
+            if entsize > portalsize then return false end
+        end
+
+        if v:GetClass() == 'prop_physics' then
+            self:CreateIllusuion(v:GetPos(), v:GetAngles(), v:GetModel())
+        end
+
+        portal:SetNext(CurTime() + self.NextTeleportCool * 1.2)
+        --self:SetNext(CurTime() + self.NextTeleportCool)
+        self:TeleportEntityToPortal(v, portal)
+
+        return true
+    end
+
+    return false
+end
+
 function ENT:Thinking()
     if IsValid(self.RealOwner) and not self.RealOwner:Alive() then
         self:Remove()
@@ -231,44 +255,25 @@ function ENT:Thinking()
         local up = self:GetAngles():Up()
         local forward = -self:GetAngles():Forward()
 
-        for i, v in pairs(ents.FindInBox(self:GetPos() + (right * 10 + up * 35 + forward * 5), self:GetPos() - (right * 10 + up * 35))) do
+        -- Finds entities RIGHT IN FRONT of portal and teleports them
+        for i, v in pairs(ents.FindInBox(self:GetPos() + (right * 10 + up * 35 + forward * 10), self:GetPos() - (right * 10 + up * 35))) do
             if v ~= self and v ~= self.ParentEntity and table.HasValue(self.AllowedEntities, v:GetClass()) and v:GetNWBool('DISABLE_PORTABLE') == false then
-                local entsize = (v:OBBMaxs() - v:OBBMins()):Length() / 2
-                local portalsize = (self:OBBMaxs() - self:OBBMins()):Length()
-                local portal = self:GetLinkedPortal()
+                local tpValid = self:TeleportIfValid(v)
 
-                if IsValid(portal) then
-                    if not v:IsPlayer() and entsize > portalsize then return end
-
-                    if v:GetClass() == 'prop_physics' then
-                        self:CreateIllusuion(v:GetPos(), v:GetAngles(), v:GetModel())
-                    end
-
-                    portal:SetNext(CurTime() + self.NextTeleportCool * 1.2)
-                    self:SetNext(CurTime() + self.NextTeleportCool)
-                    self:TeleportEntityToPortal(v, portal)
+                if tpValid then
+                    print('teleported this bad boi')
 
                     return
                 end
             end
         end
 
-        for i, v in pairs(ents.FindInBox(self:GetPos() + (right * 10 + up * 35 + forward * 45), self:GetPos() - (right * 10 + up * 35))) do
+        for i, v in pairs(ents.FindInBox(self:GetPos() + (right * 10 + up * 35 + forward * 35), self:GetPos() - (right * 10 + up * 35))) do
             if v ~= self and v ~= self.ParentEntity and table.HasValue(self.AllowedEntities, v:GetClass()) and v:GetNWBool('DISABLE_PORTABLE') == false and v:GetVelocity():Length() > 250 then
-                local entsize = (v:OBBMaxs() - v:OBBMins()):Length() / 2
-                local portalsize = (self:OBBMaxs() - self:OBBMins()):Length()
-                local portal = self:GetLinkedPortal()
+                local tpValid = self:TeleportIfValid(v)
 
-                if IsValid(portal) then
-                    if not v:IsPlayer() and entsize > portalsize then return end
-
-                    if v:GetClass() == 'prop_physics' then
-                        self:CreateIllusuion(v:GetPos(), v:GetAngles(), v:GetModel())
-                    end
-
-                    portal:SetNext(CurTime() + self.NextTeleportCool * 1.2)
-                    self:SetNext(CurTime() + self.NextTeleportCool)
-                    self:TeleportEntityToPortal(v, portal)
+                if tpValid then
+                    print('teleported this bad boi at high speed')
 
                     return
                 end
@@ -336,28 +341,27 @@ function ENT:TeleportEntityToPortal(ent, portal)
             ent:SetFOV(fov, 1)
             ]]
             if false and vel > 250 then
-                print('maximale geschwindigkeit')
                 ent:SetPos(portal:GetPos() + (-portal:GetForward() * 45) - Vector(0, 0, 25))
             else
-                --[[if portal.PlacedOnGroud then
+                if portal.PlacedOnGroud then
                     ent:SetPos(portal:GetPos() + (-portal:GetForward() * 32) + Vector(0, 0, 5))
                 elseif portal.PlacedOnCeiling then
                     ent:SetPos(portal:GetPos() - Vector(0, 0, 80))
-                else]]
-                local tr = util.TraceLine({
-                    start = portal:GetPos(),
-                    endpos = portal:GetPos() + (-portal:GetForward() * 30),
-                    filter = portal
-                })
+                else
+                    local tr = util.TraceLine({
+                        start = portal:GetPos(),
+                        endpos = portal:GetPos() + (-portal:GetForward() * 30),
+                        filter = portal
+                    })
 
-                local tr_down = util.TraceLine({
-                    start = portal:GetPos() + (-portal:GetForward() * (30 * tr.Fraction)),
-                    endpos = portal:GetPos() + (-portal:GetForward() * (30 * tr.Fraction)) - Vector(0, 0, 60),
-                    filter = portal
-                })
+                    local tr_down = util.TraceLine({
+                        start = portal:GetPos() + (-portal:GetForward() * (30 * tr.Fraction)),
+                        endpos = portal:GetPos() + (-portal:GetForward() * (30 * tr.Fraction)) - Vector(0, 0, 60),
+                        filter = portal
+                    })
 
-                ent:SetPos(tr_down.HitPos)
-                --end
+                    ent:SetPos(tr_down.HitPos)
+                end
             end
 
             local ang = ent:GetAngles()
@@ -378,5 +382,6 @@ function ENT:TeleportEntityToPortal(ent, portal)
 end
 
 function ENT:SetNext(next)
+    print('set next on', self:GetNWBool('PORTALTYPE'))
     self.next = next
 end
