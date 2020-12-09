@@ -33,8 +33,11 @@ function ENT:Initialize()
     end
 
     if CLIENT then
-        self.rt_blue = GetRenderTarget('__rtPortalBlue_' .. self:EntIndex(), 512, 512, true)
-        self.rt_red = GetRenderTarget('__rtPortalRed_' .. self:EntIndex(), 512, 512, true)
+        print(self:EntIndex())
+        self.rt_blue = GetRenderTarget('__rtPortalBlue_' .. self:EntIndex(), 512, 1024, true)
+        self.rt_red = GetRenderTarget('__rtPortalRed_' .. self:EntIndex(), 512, 1024, true)
+        print('w', self.rt_blue:GetMappingWidth())
+        print('h', self.rt_blue:GetMappingHeight())
 
         local blue = {
             ['$basetexture'] = '__rtPortalBlue_' .. self:EntIndex()
@@ -173,9 +176,10 @@ if CLIENT then
         render.ClearDepth()
         render.ClearStencil()
         -- opposite portal pos/ang
-        local pos = self:TransformPosition(epos) + Vector(0, 0, 60)
+        --local pos = self:TransformPosition(epos) + Vector(0, 0, 60)
+        local pos = other:GetPos()
         --local dist = math.abs(self:WorldToLocal(epos).x)
-        local dist = pos:Distance(other:GetPos())
+        --local dist = pos:Distance(other:GetPos())
         --print(self:GetNWBool('PORTALTYPE'), dist)
         --local ang = other:GetAngles() - self:GetAngles() + Angle(180, 0, 0)
         --ang = other:LocalToWorldAngles(ang)
@@ -190,28 +194,19 @@ if CLIENT then
         local vmd = {
             x = 0,
             y = 0,
-            w = ScrW(),
-            h = ScrH(),
+            w = 512,
+            h = 1024,
             origin = pos,
             angles = ang,
-            drawhud = true,
+            drawhud = false,
             drawviewmodel = false,
         }
 
-        local mat = Matrix()
-        mat:Scale(Vector(1, 1, 0.5))
-        --mat:Translate(Vector(0, 0, 200))
-        cam.PushModelMatrix(mat)
         --fov = (625 / dist) * 5
         -- portal clip plane
-        local oldEC = render.EnableClipping(true)
-        render.PushCustomClipPlane(-other:GetAngles():Forward(), 200)
         PORTALRENDERING = true
         render.RenderView(vmd)
         render.UpdateScreenEffectTexture()
-        render.PopCustomClipPlane()
-        render.EnableClipping(oldEC)
-        cam.PopModelMatrix(mat)
         PORTALRENDERING = false
         render.SetRenderTarget(view) -- restore player's view
     end
