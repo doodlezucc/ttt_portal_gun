@@ -33,11 +33,8 @@ function ENT:Initialize()
     end
 
     if CLIENT then
-        print(self:EntIndex())
         self.rt_blue = GetRenderTarget('__rtPortalBlue_' .. self:EntIndex(), 512, 1024, true)
         self.rt_red = GetRenderTarget('__rtPortalRed_' .. self:EntIndex(), 512, 1024, true)
-        print('w', self.rt_blue:GetMappingWidth())
-        print('h', self.rt_blue:GetMappingHeight())
 
         local blue = {
             ['$basetexture'] = '__rtPortalBlue_' .. self:EntIndex()
@@ -410,11 +407,21 @@ function ENT:TeleportEntityToPortal(ent, portal)
                 ent:SetEyeAngles(Angle(0, ang.y, 0))
             end
 
-            ent:SetVelocity(-portal:GetForward() * (vel * 1.8) + (Vector(0, 0, 10) * 6))
+            local vel = self:TransformOffset(ent:GetVelocity(), self:GetAngles(), portal:GetAngles()) * -1
+            -- Entity:SetVelocity Documentation: "If applied to a player, [SetVelocity] will actually ADD velocity, not set it." lmao
+            --ent:SetVelocity(-ent:GetVelocity() + velocity)
+            ent:SetLocalVelocity(vel)
         end)
         --ent:SetVelocity(-portal:GetForward() * vel)
+        --ent:SetVelocity(-portal:GetForward() * (vel * 1.8) + (Vector(0, 0, 10) * 6))
         --weirdly transforms
     end
+end
+
+-- yoinked from Bobblehead's portal gun:
+-- https://github.com/Luabee/PortalGun/blob/master/Portal%20Gun/Lua/entities/prop_portal/shared.lua, line 41-43
+function ENT:TransformOffset(v, a1, a2)
+    return v:Dot(a1:Right()) * a2:Right() + v:Dot(a1:Up()) * (-a2:Up()) + v:Dot(a1:Forward()) * a2:Forward()
 end
 
 function ENT:SetNext(next)
