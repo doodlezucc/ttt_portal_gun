@@ -371,7 +371,9 @@ function ENT:TeleportEntityToPortal(ent, portal)
             ent:SetFOV(64, 0)
             ent:SetFOV(fov, 1)
             ]]
-            if false and vel > 250 then
+            local pos = portal:GetPos() + (-portal:GetForward() * 60) - Vector(0, 0, 50)
+            ent:SetPos(pos)
+            --[[             if vel > 250 then
                 ent:SetPos(portal:GetPos() + (-portal:GetForward() * 45) - Vector(0, 0, 25))
             else
                 if portal.PlacedOnGroud then
@@ -393,8 +395,7 @@ function ENT:TeleportEntityToPortal(ent, portal)
 
                     ent:SetPos(tr_down.HitPos)
                 end
-            end
-
+            end ]]
             local ang = ent:GetAngles()
             ang = self:WorldToLocalAngles(ang)
             ang:RotateAroundAxis(Vector(0, 0, 1), 180)
@@ -407,14 +408,11 @@ function ENT:TeleportEntityToPortal(ent, portal)
                 ent:SetEyeAngles(Angle(0, ang.y, 0))
             end
 
-            local vel = self:TransformOffset(ent:GetVelocity(), self:GetAngles(), portal:GetAngles()) * -1
+            local newVel = self:TransformOffset(ent:GetVelocity(), self:GetAngles(), portal:GetAngles()) * -1
             -- Entity:SetVelocity Documentation: "If applied to a player, [SetVelocity] will actually ADD velocity, not set it." lmao
             --ent:SetVelocity(-ent:GetVelocity() + velocity)
-            ent:SetLocalVelocity(vel)
+            ent:SetLocalVelocity(newVel)
         end)
-        --ent:SetVelocity(-portal:GetForward() * vel)
-        --ent:SetVelocity(-portal:GetForward() * (vel * 1.8) + (Vector(0, 0, 10) * 6))
-        --weirdly transforms
     end
 end
 
