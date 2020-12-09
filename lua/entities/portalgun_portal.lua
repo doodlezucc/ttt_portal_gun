@@ -359,19 +359,21 @@ function ENT:TeleportEntityToPortal(ent, portal)
             ent:SetAngles(ang)
         end
     else
-        local vel = ent:GetVelocity():Length()
+        local vel = ent:GetVelocity()
+        local speed = vel:Length()
 
-        -- Gives the player a minimum amount of velocity after teleport
-        --[[if vel <= 5 then
-            vel = 50
-        end]]
+        -- Gives the player minimum speed after teleport
+        if speed <= 200 and portal.PlacedOnGroud then
+            vel = vel + Vector(0, 0, -200)
+        end
+
         timer.Simple(0, function()
             --[[ changes player fov back to normal in 1 second
             local fov = ent:GetFOV()
             ent:SetFOV(64, 0)
             ent:SetFOV(fov, 1)
             ]]
-            local pos = portal:GetPos() + (-portal:GetForward() * 60) - Vector(0, 0, 50)
+            local pos = portal:GetPos() + (-portal:GetForward() * 25) + Vector(0, 0, -portal:GetForward().z * 45) - Vector(0, 0, 50)
             ent:SetPos(pos)
             --[[             if vel > 250 then
                 ent:SetPos(portal:GetPos() + (-portal:GetForward() * 45) - Vector(0, 0, 25))
@@ -408,7 +410,7 @@ function ENT:TeleportEntityToPortal(ent, portal)
                 ent:SetEyeAngles(Angle(0, ang.y, 0))
             end
 
-            local newVel = self:TransformOffset(ent:GetVelocity(), self:GetAngles(), portal:GetAngles()) * -1
+            local newVel = self:TransformOffset(vel, self:GetAngles(), portal:GetAngles()) * -1
             -- Entity:SetVelocity Documentation: "If applied to a player, [SetVelocity] will actually ADD velocity, not set it." lmao
             --ent:SetVelocity(-ent:GetVelocity() + velocity)
             ent:SetLocalVelocity(newVel)
