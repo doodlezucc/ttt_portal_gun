@@ -116,7 +116,7 @@ function ENT:Draw()
     self.RescaleTime = self.RescaleTime - 0.1
     local pre = 1 - math.Clamp(self.RescaleTime, 0, 1)
     local matrix = Matrix()
-    matrix:Scale(Vector(0.2, 1.1, 1.85) * pre)
+    matrix:Scale(Vector(0.2, 1.07, 1.93) * pre)
     self:EnableMatrix('RenderMultiply', matrix)
 
     if type then
@@ -127,7 +127,7 @@ function ENT:Draw()
 
     self:DrawModel()
     local fmatrix = Matrix()
-    fmatrix:Scale(Vector(0.5, 0.93, 0.9) * pre)
+    fmatrix:Scale(Vector(0.5, 0.89, 0.94) * pre)
 
     if type then
         render.MaterialOverride(Material('models/fakeportal_ring_red'))
