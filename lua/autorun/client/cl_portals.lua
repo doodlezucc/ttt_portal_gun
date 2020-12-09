@@ -15,6 +15,18 @@ hook.Add('RenderScene', 'PortalSimulation_RenderPortals', function(pos, ang)
     end
 end)
 
+hook.Add('PostDrawTranslucentRenderables', 'DebugSpheres', function()
+    -- Only paint sphere when not in portal render phase
+    if PORTALRENDERING then return true end
+
+    for _, portal in pairs(ents.FindByClass('portalgun_portal')) do
+        -- render portals
+        if IsValid(portal) then
+            portal:DebugPlayerPos(pos, ang)
+        end
+    end
+end)
+
 hook.Add('PostDrawEffects', 'PortalSimulation_PlayerRenderFix', function()
     cam.Start3D(EyePos(), EyeAngles())
     cam.End3D()

@@ -24,7 +24,7 @@ ENT.RescaleTime = 0
    Name: Initialize
 -----------------------------------------------------------]]
 function ENT:Initialize()
-    if (SERVER) then
+    if SERVER then
         self:SetModel('models/XQM/panel360.mdl')
 
         hook.Add('Think', 'PortalSystem_ThinkingOnBlue_' .. self:EntIndex(), function()
@@ -157,10 +157,10 @@ if CLIENT then
     end
 
     function ENT:SimulatePortal(epos, eang)
-        local rt = (self:GetNWBool('PORTALTYPE')) and self.rt_red or self.rt_blue
-        local portal = self:GetLinkedPortal()
+        local rt = self:GetNWBool('PORTALTYPE') and self.rt_red or self.rt_blue
+        local other = self:GetLinkedPortal()
 
-        if not IsValid(portal) then
+        if not IsValid(other) then
             self:RenderWaves()
 
             return
@@ -169,15 +169,23 @@ if CLIENT then
         local view = render.GetRenderTarget() -- old render target
         render.SetRenderTarget(rt)
         -- clear render buff
-        render.Clear(0, 0, 0, 255)
+        render.Clear(0, 0, 0, 0)
         render.ClearDepth()
         render.ClearStencil()
         -- opposite portal pos/ang
-        local pos = portal:GetPos()
+        local pos = self:TransformPosition(epos) + Vector(0, 0, 60)
+        --local dist = math.abs(self:WorldToLocal(epos).x)
+        local dist = pos:Distance(other:GetPos())
+        --print(self:GetNWBool('PORTALTYPE'), dist)
+        --local ang = other:GetAngles() - self:GetAngles() + Angle(180, 0, 0)
+        --ang = other:LocalToWorldAngles(ang)
         local ang = self:WorldToLocalAngles(eang)
         ang = ang - Angle(0, 180, 0)
-        ang = portal:LocalToWorldAngles(ang)
+        ang = other:LocalToWorldAngles(ang)
 
+        --print(self:GetNWBool('PORTALTYPE'), ang)
+        -- dist=313: fov=10
+        -- dist=625: fov=5
         -- render view data
         local vmd = {
             x = 0,
@@ -186,17 +194,51 @@ if CLIENT then
             h = ScrH(),
             origin = pos,
             angles = ang,
-            drawhud = false,
+            drawhud = true,
             drawviewmodel = false,
-            fov = 75
         }
 
+        local mat = Matrix()
+        mat:Scale(Vector(1, 1, 0.5))
+        --mat:Translate(Vector(0, 0, 200))
+        cam.PushModelMatrix(mat)
+        --fov = (625 / dist) * 5
+        -- portal clip plane
+        local oldEC = render.EnableClipping(true)
+        render.PushCustomClipPlane(-other:GetAngles():Forward(), 200)
         PORTALRENDERING = true
         render.RenderView(vmd)
         render.UpdateScreenEffectTexture()
+        render.PopCustomClipPlane()
+        render.EnableClipping(oldEC)
+        cam.PopModelMatrix(mat)
         PORTALRENDERING = false
         render.SetRenderTarget(view) -- restore player's view
     end
+
+    function ENT:DebugPlayerPos()
+        --if self:GetNWBool('PORTALTYPE') then return end
+        render.DrawLine(self:GetPos(), self:GetPos() - self:GetAngles():Forward() * 50)
+        local color = Color(240, 190, 80)
+
+        if self:GetNWBool('PORTALTYPE') then
+            color = Color(80, 120, 230)
+        end
+
+        local transformed = self:TransformPosition(LocalPlayer():EyePos())
+        render.DrawWireframeSphere(transformed, 10, 18, 18, color, true)
+        render.DrawLine(self:GetPos(), transformed, color, true)
+    end
+end
+
+function ENT:TransformPosition(pos)
+    local other = self:GetLinkedPortal()
+    if not IsValid(other) then return pos end
+    local diff = self:WorldToLocal(pos)
+    diff = diff * Vector(-1, -1, 1)
+    local transformed = other:LocalToWorld(diff)
+
+    return transformed
 end
 
 function ENT:CreateIllusuion(pos, ang, mdl)
@@ -284,6 +326,8 @@ end
 
 function ENT:TeleportEntityToPortal(ent, portal)
     if CLIENT then return end
+    self:EmitSound('weapons/portalgun/portal_enter_0' .. math.random(1, 3) .. '.wav')
+    ent:EmitSound('weapons/portalgun/portal_exit_0' .. math.random(1, 2) .. '.wav')
 
     if (not ent:IsPlayer()) then
         if IsValid(ent) and ent ~= portal.ParentEntity then
@@ -312,9 +356,6 @@ function ENT:TeleportEntityToPortal(ent, portal)
                 ent:GetPhysicsObject():SetVelocity(-portal:GetForward() * (vel * 1.5))
             end
 
-            self:EmitSound('weapons/portalgun/portal_enter_0' .. math.random(1, 3) .. '.wav')
-            ent:EmitSound('weapons/portalgun/portal_exit_0' .. math.random(1, 2) .. '.wav')
-
             if ent:GetClass() == 'portal_energy_pelet' then
                 ent:SetLifeTime(CurTime() + 5)
             end
@@ -326,8 +367,6 @@ function ENT:TeleportEntityToPortal(ent, portal)
             ent:SetAngles(ang)
         end
     else
-        self:EmitSound('weapons/portalgun/portal_enter_0' .. math.random(1, 3) .. '.wav')
-        ent:EmitSound('weapons/portalgun/portal_exit_0' .. math.random(1, 2) .. '.wav')
         local vel = ent:GetVelocity():Length()
 
         -- Gives the player a minimum amount of velocity after teleport
@@ -378,6 +417,8 @@ function ENT:TeleportEntityToPortal(ent, portal)
 
             ent:SetVelocity(-portal:GetForward() * (vel * 1.8) + (Vector(0, 0, 10) * 6))
         end)
+        --ent:SetVelocity(-portal:GetForward() * vel)
+        --weirdly transforms
     end
 end
 
