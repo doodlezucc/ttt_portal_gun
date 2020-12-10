@@ -398,18 +398,13 @@ function ENT:TeleportEntityToPortal(ent, portal)
                     ent:SetPos(tr_down.HitPos)
                 end
             end ]]
-            local ang = ent:GetAngles()
-            ang = self:WorldToLocalAngles(ang)
-            ang:RotateAroundAxis(Vector(0, 0, 1), 180)
-            ang = portal:LocalToWorldAngles(ang)
-
-            if self.PlacedOnGroud or self.PlacedOnCeiling then
-                --print('watdefok')
-                --ent:SetEyeAngles((-portal:GetForward()):Angle())
-            else
-                ent:SetEyeAngles(Angle(0, ang.y, 0))
-            end
-
+            -- Transform player eye angle
+            local newAng = self:TransformOffset(ent:EyeAngles():Forward(), self:GetAngles(), portal:GetAngles()) * -1
+            newAng = newAng:Angle()
+            print('pre', ent:EyeAngles())
+            print('post', newAng)
+            ent:SetEyeAngles(newAng)
+            --Transform player velocity
             local newVel = self:TransformOffset(vel, self:GetAngles(), portal:GetAngles()) * -1
             -- Entity:SetVelocity Documentation: "If applied to a player, [SetVelocity] will actually ADD velocity, not set it." lmao
             --ent:SetVelocity(-ent:GetVelocity() + velocity)
