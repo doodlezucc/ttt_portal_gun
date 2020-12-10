@@ -320,8 +320,7 @@ end
 
 function ENT:TeleportEntityToPortal(ent, portal)
     if CLIENT then return end
-    self:EmitSound('weapons/portalgun/portal_enter_0' .. math.random(1, 3) .. '.wav')
-    ent:EmitSound('weapons/portalgun/portal_exit_0' .. math.random(1, 2) .. '.wav')
+    local volume = 1
 
     if (not ent:IsPlayer()) then
         if IsValid(ent) and ent ~= portal.ParentEntity then
@@ -370,35 +369,37 @@ function ENT:TeleportEntityToPortal(ent, portal)
         end
 
         vel.z = math.max(-2000, vel.z) -- maximum downward velocity
-
-        timer.Simple(0, function()
-            --[[ changes player fov back to normal in 1 second
+        --[[ changes player fov back to normal in 1 second
             local fov = ent:GetFOV()
             ent:SetFOV(64, 0)
             ent:SetFOV(fov, 1)
             ]]
-            -- Set player position
-            local pos = portal:GetPos()
-            pos = pos - portal:GetForward() * 25 -- spawn player in front of portal
-            local zPos = -50 -- player z position is at their feet level; subtract half of portal height
-            zPos = zPos - math.min(portal:GetForward().z * 45, 0) -- change player z position based on portal angle
-            pos.z = pos.z + zPos
-            ent:SetPos(pos)
-            local isFallingEndlessly = (self.PlacedOnGround and portal.PlacedOnCeiling) or (self.PlacedOnCeiling and portal.PlacedOnGround)
+        -- Set player position
+        local pos = portal:GetPos()
+        pos = pos - portal:GetForward() * 25 -- spawn player in front of portal
+        local zPos = -50 -- player z position is at their feet level; subtract half of portal height
+        zPos = zPos - math.min(portal:GetForward().z * 45, 0) -- change player z position based on portal angle
+        pos.z = pos.z + zPos
+        ent:SetPos(pos)
+        local isFallingEndlessly = (self.PlacedOnGround and portal.PlacedOnCeiling) or (self.PlacedOnCeiling and portal.PlacedOnGround)
 
-            -- Transform player eye angle
-            if not isFallingEndlessly then
-                local ang = ent:EyeAngles()
-                ang = self:TransformOffset(ang:Forward(), self:GetAngles(), portal:GetAngles()) * -1
-                ang = ang:Angle()
-                ent:SetEyeAngles(ang)
-            end
+        -- Transform player eye angle
+        if not isFallingEndlessly then
+            local ang = ent:EyeAngles()
+            ang = self:TransformOffset(ang:Forward(), self:GetAngles(), portal:GetAngles()) * -1
+            ang = ang:Angle()
+            ent:SetEyeAngles(ang)
+        end
 
-            --Transform player velocity
-            local newVel = self:TransformOffset(vel, self:GetAngles(), portal:GetAngles()) * -1
-            ent:SetLocalVelocity(newVel)
-        end)
+        --Transform player velocity
+        local newVel = self:TransformOffset(vel, self:GetAngles(), portal:GetAngles()) * -1
+        ent:SetLocalVelocity(newVel)
+        volume = math.min(1, 1000 / (newVel:Length() + 500))
     end
+
+    local pitch = 100 + math.random(-5, 5)
+    self:EmitSound('weapons/portalgun/portal_enter_0' .. math.random(1, 3) .. '.wav', 75, pitch, volume)
+    ent:EmitSound('weapons/portalgun/portal_exit_0' .. math.random(1, 2) .. '.wav', 75, pitch, volume)
 end
 
 -- yoinked from Bobblehead's portal gun:
