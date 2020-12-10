@@ -373,31 +373,13 @@ function ENT:TeleportEntityToPortal(ent, portal)
             ent:SetFOV(64, 0)
             ent:SetFOV(fov, 1)
             ]]
-            local pos = portal:GetPos() + (-portal:GetForward() * 25) + Vector(0, 0, -portal:GetForward().z * 45) - Vector(0, 0, 50)
+            -- Set player position
+            local pos = portal:GetPos()
+            pos = pos - portal:GetForward() * 25 -- spawn player in front of portal
+            local zPos = -50 -- player z position is at their feet level; subtract half of portal height
+            zPos = zPos - math.min(portal:GetForward().z * 45, 0) -- change player z position based on portal angle
+            pos.z = pos.z + zPos
             ent:SetPos(pos)
-            --[[             if vel > 250 then
-                ent:SetPos(portal:GetPos() + (-portal:GetForward() * 45) - Vector(0, 0, 25))
-            else
-                if portal.PlacedOnGroud then
-                    ent:SetPos(portal:GetPos() + (-portal:GetForward() * 32) + Vector(0, 0, 5))
-                elseif portal.PlacedOnCeiling then
-                    ent:SetPos(portal:GetPos() - Vector(0, 0, 80))
-                else
-                    local tr = util.TraceLine({
-                        start = portal:GetPos(),
-                        endpos = portal:GetPos() + (-portal:GetForward() * 30),
-                        filter = portal
-                    })
-
-                    local tr_down = util.TraceLine({
-                        start = portal:GetPos() + (-portal:GetForward() * (30 * tr.Fraction)),
-                        endpos = portal:GetPos() + (-portal:GetForward() * (30 * tr.Fraction)) - Vector(0, 0, 60),
-                        filter = portal
-                    })
-
-                    ent:SetPos(tr_down.HitPos)
-                end
-            end ]]
             -- Transform player eye angle
             local newAng = self:TransformOffset(ent:EyeAngles():Forward(), self:GetAngles(), portal:GetAngles()) * -1
             newAng = newAng:Angle()
@@ -406,8 +388,6 @@ function ENT:TeleportEntityToPortal(ent, portal)
             ent:SetEyeAngles(newAng)
             --Transform player velocity
             local newVel = self:TransformOffset(vel, self:GetAngles(), portal:GetAngles()) * -1
-            -- Entity:SetVelocity Documentation: "If applied to a player, [SetVelocity] will actually ADD velocity, not set it." lmao
-            --ent:SetVelocity(-ent:GetVelocity() + velocity)
             ent:SetLocalVelocity(newVel)
         end)
     end
