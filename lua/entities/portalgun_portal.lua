@@ -166,8 +166,7 @@ if CLIENT then
             return
         end
 
-        local view = render.GetRenderTarget() -- old render target
-        render.SetRenderTarget(rt)
+        render.PushRenderTarget(rt)
         -- clear render buff
         render.Clear(0, 0, 0, 0)
         render.ClearDepth()
@@ -176,7 +175,7 @@ if CLIENT then
         --local pos = self:TransformPosition(epos) + Vector(0, 0, 60)
         local pos = other:GetPos()
         --local dist = math.abs(self:WorldToLocal(epos).x)
-        --local dist = pos:Distance(other:GetPos())
+        local dist = epos:Distance(self:GetPos())
         --print(self:GetNWBool('PORTALTYPE'), dist)
         --local ang = other:GetAngles() - self:GetAngles() + Angle(180, 0, 0)
         --ang = other:LocalToWorldAngles(ang)
@@ -200,15 +199,15 @@ if CLIENT then
             angles = ang,
             drawhud = false,
             drawviewmodel = false,
+            fov = 30 + (625 / dist) * 2
         }
 
-        --fov = (625 / dist) * 5
         -- portal clip plane
         PORTALRENDERING = true
         render.RenderView(vmd)
         render.UpdateScreenEffectTexture()
         PORTALRENDERING = false
-        render.SetRenderTarget(view) -- restore player's view
+        render.PopRenderTarget()
     end
 
     function ENT:DebugPlayerPos()
