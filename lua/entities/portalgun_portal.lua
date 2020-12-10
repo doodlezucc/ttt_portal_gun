@@ -363,7 +363,7 @@ function ENT:TeleportEntityToPortal(ent, portal)
         local speed = vel:Length()
 
         -- Gives the player minimum speed after teleport
-        if speed <= 200 and portal.PlacedOnGroud then
+        if speed <= 200 and portal.PlacedOnGround then
             vel = vel + Vector(0, 0, -200)
         end
 
