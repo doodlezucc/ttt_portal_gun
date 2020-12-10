@@ -180,10 +180,13 @@ if CLIENT then
         --print(self:GetNWBool('PORTALTYPE'), dist)
         --local ang = other:GetAngles() - self:GetAngles() + Angle(180, 0, 0)
         --ang = other:LocalToWorldAngles(ang)
-        local ang = self:WorldToLocalAngles(eang)
-        ang = ang - Angle(0, 180, 0)
-        ang = other:LocalToWorldAngles(ang)
+        --local ang = self:WorldToLocalAngles(eang)
+        --ang = ang - Angle(0, 180, 0)
+        --ang = other:LocalToWorldAngles(ang)
+        local ang = (-other:GetAngles():Forward()):Angle()
 
+        --ang.y = 0
+        --ang.r = 180
         --print(self:GetNWBool('PORTALTYPE'), ang)
         -- dist=313: fov=10
         -- dist=625: fov=5
