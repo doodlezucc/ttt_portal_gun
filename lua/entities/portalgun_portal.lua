@@ -13,8 +13,8 @@ ENT.RealOwner = NULL
 ENT.ParentEntity = NULL
 ENT.next = 0
 ENT.NextTeleportCool = 0.4
-ENT.PlacedOnGroud = false
-ENT.PlacedOnCeiling = false
+--ENT.PlacedOnGround = false
+--ENT.PlacedOnCeiling = false
 ENT.Ambient = nil
 ENT.RenderLocalPlayer = false
 ENT.AllowedEntities = {}
@@ -367,6 +367,8 @@ function ENT:TeleportEntityToPortal(ent, portal)
             vel = vel + Vector(0, 0, -200)
         end
 
+        vel.z = math.max(-2000, vel.z) -- maximum downward velocity
+
         timer.Simple(0, function()
             --[[ changes player fov back to normal in 1 second
             local fov = ent:GetFOV()
@@ -380,12 +382,16 @@ function ENT:TeleportEntityToPortal(ent, portal)
             zPos = zPos - math.min(portal:GetForward().z * 45, 0) -- change player z position based on portal angle
             pos.z = pos.z + zPos
             ent:SetPos(pos)
+            local isFallingEndlessly = (self.PlacedOnGround and portal.PlacedOnCeiling) or (self.PlacedOnCeiling and portal.PlacedOnGround)
+
             -- Transform player eye angle
-            local newAng = self:TransformOffset(ent:EyeAngles():Forward(), self:GetAngles(), portal:GetAngles()) * -1
-            newAng = newAng:Angle()
-            print('pre', ent:EyeAngles())
-            print('post', newAng)
-            ent:SetEyeAngles(newAng)
+            if not isFallingEndlessly then
+                local ang = ent:EyeAngles()
+                ang = self:TransformOffset(ang:Forward(), self:GetAngles(), portal:GetAngles()) * -1
+                ang = ang:Angle()
+                ent:SetEyeAngles(ang)
+            end
+
             --Transform player velocity
             local newVel = self:TransformOffset(vel, self:GetAngles(), portal:GetAngles()) * -1
             ent:SetLocalVelocity(newVel)

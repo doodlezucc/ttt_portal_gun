@@ -530,7 +530,7 @@ function SWEP:FirePortal(type)
         ent:Spawn()
 
         if tr.HitNormal == Vector(0, 0, 1) then
-            ent.PlacedOnGroud = true
+            ent.PlacedOnGround = true
         elseif tr.HitNormal == Vector(0, 0, -1) then
             ent.PlacedOnCeiling = true
         end
