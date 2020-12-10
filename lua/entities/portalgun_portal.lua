@@ -294,25 +294,13 @@ function ENT:Thinking()
         -- Finds entities RIGHT IN FRONT of portal and teleports them
         for i, v in pairs(ents.FindInBox(self:GetPos() + (right * 10 + up * 35 + forward * 10), self:GetPos() - (right * 10 + up * 35))) do
             if v ~= self and v ~= self.ParentEntity and table.HasValue(self.AllowedEntities, v:GetClass()) and v:GetNWBool('DISABLE_PORTABLE') == false then
-                local tpValid = self:TeleportIfValid(v)
-
-                if tpValid then
-                    print('teleported this bad boi')
-
-                    return
-                end
+                self:TeleportIfValid(v)
             end
         end
 
         for i, v in pairs(ents.FindInBox(self:GetPos() + (right * 10 + up * 35 + forward * 35), self:GetPos() - (right * 10 + up * 35))) do
             if v ~= self and v ~= self.ParentEntity and table.HasValue(self.AllowedEntities, v:GetClass()) and v:GetNWBool('DISABLE_PORTABLE') == false and v:GetVelocity():Length() > 250 then
-                local tpValid = self:TeleportIfValid(v)
-
-                if tpValid then
-                    print('teleported this bad boi at high speed')
-
-                    return
-                end
+                self:TeleportIfValid(v)
             end
         end
     end
@@ -409,6 +397,5 @@ function ENT:TransformOffset(v, a1, a2)
 end
 
 function ENT:SetNext(next)
-    print('set next on', self:GetNWBool('PORTALTYPE'))
     self.next = next
 end
