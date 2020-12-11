@@ -12,7 +12,7 @@ end
 SWEP.Base = 'weapon_tttbase'
 SWEP.Kind = WEAPON_EQUIP1
 
-SWEP.CanBuy = {ROLE_TRAITOR}
+SWEP.CanBuy = {ROLE_TRAITOR, ROLE_DETECTIVE}
 
 SWEP.AutoSpawnable = false
 SWEP.InLoadoutFor = nil
@@ -26,9 +26,9 @@ if CLIENT then
     SWEP.Icon = 'vgui/ttt/pg_wall' -- Text shown in the equip menu
 
     SWEP.EquipMenuData = {
-        type = 'Portalgun',
+        type = 'Weapon',
         --desc = 'This is a portal gun that actually works??!!1!'
-        desc = 'prtl'
+        desc = 'portal gun go brrr'
     }
 end
 
@@ -37,7 +37,7 @@ if SERVER then
 end
 
 -- //TTT Convertion Code \\
-SWEP.Author = 'Wheatley, Port by Julian7752, Version 2.0 by Zu'
+SWEP.Author = 'Wheatley, Port by Julian7752, Version 2.0 by Zu, Fixed by doodlezucc'
 SWEP.Purpose = 'Makes holes. Not bullet holes'
 SWEP.Category = 'Portal'
 SWEP.Spawnable = false
@@ -361,36 +361,36 @@ function SWEP:Think()
             })
 
             -- DROP FUNC
-            if IsValid(self.HoldenProp) and self.HoldenProp ~= NULL then
-                if self:DropProp() then return end
-            end
+            if IsValid(self.HoldenProp) and self.HoldenProp ~= NULL and self:DropProp() then return end
 
             -- PORTAL PICKUP FUNC
             for i, v in pairs(ents.FindInSphere(tr.HitPos, 5)) do
-                if string.find(v:GetClass(), 'portalgun_portal_') then
-                    local distprec = 1 - v:GetPos():Distance(self:GetOwner():EyePos()) / 150 -- get distance
-                    local portal = v:GetLinkedPortal()
-                    if not IsValid(portal) then return end -- no portal - can't pickup
-
-                    tr = util.TraceLine({
-                        start = portal:GetPos(),
-                        endpos = portal:GetPos() - portal:GetAngles():Forward() * (150 * distprec) - Vector(0, 0, 35),
-                        filter = portal
-                    })
-
-                    if IsValid(tr.Entity) and table.HasValue(self.TPEnts, tr.Entity:GetClass()) and not tr.Entity:IsPlayer() then
-                        local op = portal:GetLinkedPortal()
-                        if not IsValid(op) then return end
-                        op:SetNext(CurTime() + op.NextTeleportCool)
-                        portal:TeleportEntityToPortal(tr.Entity, op)
-                        if self:PickupProp(tr.Entity) then return end
-                    end
-                end
+                if string.find(v:GetClass(), 'portalgun_portal_') and PortalGunValid(v) then return end
             end
 
             self:EmitSound('player/object_use_failure_01.wav')
             self:SendWeaponAnim(ACT_VM_DRYFIRE)
         end
+    end
+end
+
+function SWEP:PortalGunValid(v)
+    local distprec = 1 - v:GetPos():Distance(self:GetOwner():EyePos()) / 150 -- get distance
+    local portal = v:GetLinkedPortal()
+    if not IsValid(portal) then return true end -- no portal - can't pickup
+
+    tr = util.TraceLine({
+        start = portal:GetPos(),
+        endpos = portal:GetPos() - portal:GetAngles():Forward() * (150 * distprec) - Vector(0, 0, 35),
+        filter = portal
+    })
+
+    if IsValid(tr.Entity) and table.HasValue(self.TPEnts, tr.Entity:GetClass()) and not tr.Entity:IsPlayer() then
+        local op = portal:GetLinkedPortal()
+        if not IsValid(op) then return true end
+        op:SetNext(CurTime() + op.NextTeleportCool)
+        portal:TeleportEntityToPortal(tr.Entity, op)
+        if self:PickupProp(tr.Entity) then return true end
     end
 end
 

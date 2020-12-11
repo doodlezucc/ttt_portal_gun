@@ -1,4 +1,3 @@
-print('Eventually, it all worked!')
 -- ------------------------------------------------------------------------
 -- WEAPON PORTALGUN FOR GARRY'S MOD 13 --
 -- WRITEN BY WHEATLEY - http://steamcommunity.com/id/wheatley_wl/
