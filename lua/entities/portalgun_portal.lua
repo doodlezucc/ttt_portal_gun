@@ -298,7 +298,7 @@ function ENT:Thinking()
             end
         end
 
-        for i, v in pairs(ents.FindInBox(self:GetPos() + (right * 10 + up * 35 + forward * 35), self:GetPos() - (right * 10 + up * 35))) do
+        for i, v in pairs(ents.FindInBox(self:GetPos() + (right * 10 + up * 35 + forward * 50), self:GetPos() - (right * 10 + up * 35))) do
             if v ~= self and v ~= self.ParentEntity and table.HasValue(self.AllowedEntities, v:GetClass()) and v:GetNWBool('DISABLE_PORTABLE') == false and v:GetVelocity():Length() > 250 then
                 self:TeleportIfValid(v)
             end
