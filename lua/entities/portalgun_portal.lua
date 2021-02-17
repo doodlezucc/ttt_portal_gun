@@ -69,7 +69,7 @@ function ENT:Initialize()
         self.ring:SetAngles(self:GetAngles() - Angle(180, 0, 0))
         self.ring:SetParent(self)
         self.ring:SetNoDraw(true)
-        self.ring:SetMaterial(Material('models/shiny'))
+        self.ring:SetMaterial('models/shiny')
     end
 
     if self.Ambient then
