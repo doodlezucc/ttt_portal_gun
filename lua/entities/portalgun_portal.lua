@@ -265,6 +265,11 @@ function ENT:TeleportIfValid(v)
             local entsize = (v:OBBMaxs() - v:OBBMins()):Length() / 2
             local portalsize = (self:OBBMaxs() - self:OBBMins()):Length()
             if entsize > portalsize then return false end
+        elseif not self.PlacedOnGround then
+            -- Prevent back and forth; Don't teleport if player is not moving towards portal
+            local d1 = self:GetPos():DistToSqr(v:GetPos())
+            local d2 = self:GetPos():DistToSqr(v:GetPos() + v:GetVelocity())
+            if d2 <= d1 then return false end
         end
 
         if v:GetClass() == 'prop_physics' then
