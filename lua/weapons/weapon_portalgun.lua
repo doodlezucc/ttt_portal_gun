@@ -415,6 +415,24 @@ function SWEP:FirePortal(type)
             })
         end
 
+        local hitAng = tr.HitNormal:Angle()
+        local right = hitAng:Right() * 30
+        local u = hitAng:Up() * 50
+
+        -- Prevent portals from spawning inside each other
+        for i, v in pairs(ents.FindInBox(tr.HitPos + (right + u + hitAng:Forward()), tr.HitPos - (right + u))) do
+            if IsValid(v) and v ~= self and v ~= self.ParentEntity and v:GetClass() == 'portalgun_portal' then
+                -- Another portal blocks except when it's being replaced by this new one
+                local getsReplaced = v.RealOwner == owner and v:GetNWBool('PORTALTYPE') == type
+
+                if not getsReplaced then
+                    self:DispatchSparkEffect()
+
+                    return
+                end
+            end
+        end
+
         --mask
         local portalpos = tr.HitPos
         local portalang
@@ -430,53 +448,52 @@ function SWEP:FirePortal(type)
 
         local tr_up = util.TraceLine({
             start = tr.HitPos,
-            endpos = tr.HitPos + tr.HitNormal:Angle():Up() * 50,
+            endpos = tr.HitPos + u,
             filter = ent
         })
 
         local tr_down = util.TraceLine({
             start = tr.HitPos,
-            endpos = tr.HitPos - tr.HitNormal:Angle():Up() * 50,
+            endpos = tr.HitPos - u,
             filter = ent
         })
 
         local tr_left = util.TraceLine({
             start = tr.HitPos,
-            endpos = tr.HitPos + tr.HitNormal:Angle():Right() * 30,
+            endpos = tr.HitPos + right,
             filter = ent
         })
 
         local tr_right = util.TraceLine({
             start = tr.HitPos,
-            endpos = tr.HitPos - tr.HitNormal:Angle():Right() * 30,
+            endpos = tr.HitPos - right,
             filter = ent
         })
 
         --
-        local r = tr.HitNormal:Angle():Right()
-        local u = tr.HitNormal:Angle():Up()
+        u = hitAng:Up() * 48
 
         local tr_right_pl = util.TraceLine({
-            start = tr.HitPos - r * 30,
-            endpos = (tr.HitPos - r * 30) - (tr.HitNormal:Angle():Forward() * 1),
+            start = tr.HitPos - right,
+            endpos = (tr.HitPos - right) - (tr.HitNormal:Angle():Forward() * 1),
             filter = ent
         })
 
         local tr_left_pl = util.TraceLine({
-            start = tr.HitPos + r * 30,
-            endpos = (tr.HitPos + r * 30) - (tr.HitNormal:Angle():Forward() * 1),
+            start = tr.HitPos + right,
+            endpos = (tr.HitPos + right) - (tr.HitNormal:Angle():Forward() * 1),
             filter = ent
         })
 
         local tr_top_pl = util.TraceLine({
-            start = tr.HitPos + u * 48,
-            endpos = (tr.HitPos + u * 48) - (tr.HitNormal:Angle():Forward() * 1),
+            start = tr.HitPos + u,
+            endpos = (tr.HitPos + u) - (tr.HitNormal:Angle():Forward() * 1),
             filter = ent
         })
 
         local tr_bot_pl = util.TraceLine({
-            start = tr.HitPos - u * 48,
-            endpos = (tr.HitPos - u * 48) - (tr.HitNormal:Angle():Forward() * 1),
+            start = tr.HitPos - u,
+            endpos = (tr.HitPos - u) - (tr.HitNormal:Angle():Forward() * 1),
             filter = ent
         })
 
@@ -491,20 +508,20 @@ function SWEP:FirePortal(type)
         local ang = tr.HitNormal:Angle() - Angle(90, 0, 0)
         local coords = Vector(35, 35, 25)
         coords:Rotate(ang)
-        u = tr.HitNormal:Angle():Up()
+        u = tr.HitNormal:Angle():Up() * 50
         local lr_fract = Vector(0, 0, 0)
         local ud_fract = Vector(0, 0, 0)
 
         if tr_left.Hit then
-            lr_fract = ((r * 30) * (1 - tr_left.Fraction))
+            lr_fract = (right * (1 - tr_left.Fraction))
         elseif tr_right.Hit then
-            lr_fract = (-(r * 30) * (1 - tr_right.Fraction))
+            lr_fract = (-right * (1 - tr_right.Fraction))
         end
 
         if tr_up.Hit then
-            ud_fract = (u * 50) * (1 - tr_up.Fraction)
+            ud_fract = u * (1 - tr_up.Fraction)
         elseif tr_down.Hit then
-            ud_fract = -(u * 50) * (1 - tr_down.Fraction)
+            ud_fract = -u * (1 - tr_down.Fraction)
         end
 
         ent:SetPos(portalpos - lr_fract - ud_fract)
