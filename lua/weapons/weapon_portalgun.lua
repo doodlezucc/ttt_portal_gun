@@ -3,11 +3,6 @@
 -- WRITEN BY WHEATLEY AND JULIAN7752
 -- ------------------------------------------------------------------------
 AddCSLuaFile()
-
-if SERVER then
-    game.ConsoleCommand('sv_kickerrornum 0')
-end
-
 -- // TTT Convertion Code \\
 SWEP.Base = 'weapon_tttbase'
 SWEP.Kind = WEAPON_EQUIP1
@@ -27,7 +22,6 @@ if CLIENT then
 
     SWEP.EquipMenuData = {
         type = 'Weapon',
-        --desc = 'This is a portal gun that actually works??!!1!'
         desc = 'portal gun go brrr'
     }
 end
@@ -38,9 +32,9 @@ end
 
 -- //TTT Convertion Code \\
 SWEP.Author = 'Wheatley, Port by Julian7752, Version 2.0 by Zu, Fixed by doodlezucc'
-SWEP.Purpose = 'Makes holes. Not bullet holes'
+SWEP.Purpose = 'Makes holes. Not bullet holes.'
 SWEP.Category = 'Portal'
-SWEP.Spawnable = false
+SWEP.Spawnable = true
 SWEP.AdminOnly = false
 SWEP.AutoSwitchTo = true
 SWEP.ViewModel = 'models/weapons/v_portalgunv2.mdl'
@@ -80,9 +74,9 @@ end
 net.Receive('PORTALGUN_SHOOT_PORTAL', function()
     local pl = net.ReadEntity()
     local port = net.ReadEntity()
-    local type = ((net.ReadFloat() == 1) and true or false)
+    local ptype = ((net.ReadFloat() == 1) and true or false)
 
-    if (type) then
+    if (ptype) then
         pl:SetNWEntity('PORTALGUN_PORTALS_RED', port)
     else
         pl:SetNWEntity('PORTALGUN_PORTALS_BLUE', port)
@@ -101,33 +95,12 @@ if SERVER then
     end)
 end
 
-hook.Add('AllowPlayerPickup', 'DisallowPickup', function(ply, ent)
-    if IsValid(ply:GetActiveWeapon()) and IsValid(ent) and ply:GetActiveWeapon():GetClass() == 'weapon_portalgun' and table.HasValue(pickable, ent:GetModel()) or table.HasValue(pickable, ent:GetClass()) then return false end
-end)
-
+-- Tell Gmod to render all objects visible from any portal
 hook.Add('SetupPlayerVisibility', 'PORTALGUN_PORTAL_SETUPVIS', function(ply, ent)
-    for _, v in pairs(ents.FindByClass('portalgun_portal_red')) do
-        AddOriginToPVS(v:GetPos())
-    end
-
-    for _, v in pairs(ents.FindByClass('portalgun_portal_blue')) do
-        AddOriginToPVS(v:GetPos())
-    end
-
-    for _, v in pairs(ents.FindByClass('portalgun_portal_atlas1')) do
-        AddOriginToPVS(v:GetPos())
-    end
-
-    for _, v in pairs(ents.FindByClass('portalgun_portal_atlas2')) do
-        AddOriginToPVS(v:GetPos())
-    end
-
-    for _, v in pairs(ents.FindByClass('portalgun_portal_pbody1')) do
-        AddOriginToPVS(v:GetPos())
-    end
-
-    for _, v in pairs(ents.FindByClass('portalgun_portal_pbody2')) do
-        AddOriginToPVS(v:GetPos())
+    for _, v in pairs(ents.GetAll()) do
+        if v:GetClass() == 'portalgun_portal' then
+            AddOriginToPVS(v:GetPos())
+        end
     end
 end)
 
@@ -135,34 +108,40 @@ function SWEP:Initialize()
     self:SetWeaponHoldType('shotgun')
 end
 
--- local wpn_ico = Material('entities/weapon_portalgun.png')
-local function PortalTrace(ent)
-    if IsValid(ent) then
-        if ent:IsPlayer() then return false end -- players
-        if ent:IsWeapon() then return false end
-        if table.HasValue(pickable, ent:GetModel()) or table.HasValue(pickable, ent:GetClass()) then return false end -- some props
-    end
-
+function SWEP:Holster(wep)
     return true
 end
 
-function SWEP:DispatchSparkEffect()
-    local hit
+local function HitWorldOnly() return false end
 
-    if self:GetOwner() ~= NULL and self:GetOwner():IsPlayer() then
-        hit = util.TraceLine({
-            start = self:GetOwner():EyePos(),
-            endpos = self:GetOwner():EyePos() + (self:GetOwner():EyeAngles():Forward()) * 30000,
-            filter = PortalTrace,
+local function PortalTrace(data)
+    return util.TraceLine({
+        start = data.start,
+        endpos = data.endpos,
+        mask = data.mask,
+        filter = HitWorldOnly
+    })
+end
+
+local function TraceHit(gun)
+    local owner = gun:GetOwner()
+
+    if owner ~= NULL and owner:IsPlayer() then
+        return PortalTrace({
+            start = owner:EyePos(),
+            endpos = owner:EyePos() + (owner:EyeAngles():Forward()) * 30000,
             mask = MASK_SHOT_PORTAL
         })
     else
-        hit = util.TraceLine({
-            start = self:GetPos(),
-            endpos = self:GetPos() + self:GetAngles():Forward() * 30000,
-            filter = PortalTrace
+        return PortalTrace({
+            start = gun:GetPos(),
+            endpos = gun:GetPos() + gun:GetAngles():Forward() * 30000,
         })
     end
+end
+
+function SWEP:DispatchSparkEffect()
+    local hit = TraceHit(self)
 
     if CLIENT then return end
     local sprk = ents.Create('env_spark')
@@ -177,103 +156,42 @@ function SWEP:DispatchSparkEffect()
     end)
 end
 
-function SWEP:PrimaryAttack()
-    if not self.CanFirePortal1 or IsValid(self.HoldenProp) then return end
+function SWEP:PerformAttack(canFire, ptype, sound_id)
+    if not canFire or IsValid(self.HoldenProp) then return end
     self:SetNextPrimaryFire(CurTime() + self.RefireInterval)
     self:SetNextSecondaryFire(CurTime() + self.RefireInterval)
 
     if IsValid(self:GetOwner()) and self:GetOwner():WaterLevel() >= 3 then
-        self:PlayFizzleAnimation()
-
-        return
+        return self:PlayFizzleAnimation()
     end
 
     self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
-    self:EmitSound('weapons/portalgun/wpn_portal_gun_fire_blue_0' .. math.random(1, 3) .. '.wav')
+    self:EmitSound('weapons/portalgun/wpn_portal_gun_fire_' .. sound_id .. '_0' .. math.random(1, 3) .. '.wav')
 
-    if not self:CanPlacePortal(false) then
-        self:DispatchSparkEffect()
-
-        return
+    if not self:CanPlacePortal(ptype) then
+        return self:DispatchSparkEffect()
     end
 
-    self.LastPortal = false
-    self:CreateShootEffect(false)
-    self:FirePortal(false)
+    self.LastPortal = ptype
+    self:CreateShootEffect(ptype)
+    self:FirePortal(ptype)
 end
 
-function SWEP:SecondaryAttack()
-    if not self.CanFirePortal2 or IsValid(self.HoldenProp) then return end
-    self:SetNextPrimaryFire(CurTime() + self.RefireInterval)
-    self:SetNextSecondaryFire(CurTime() + self.RefireInterval)
+function SWEP:PrimaryAttack() self:PerformAttack(self.CanFirePortal1, false, 'blue') end
+function SWEP:SecondaryAttack() self:PerformAttack(self.CanFirePortal2, true, 'red') end
 
-    if IsValid(self:GetOwner()) and self:GetOwner():WaterLevel() >= 3 then
-        self:PlayFizzleAnimation()
-
-        return
-    end
-
-    self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
-    self:EmitSound('weapons/portalgun/wpn_portal_gun_fire_red_0' .. math.random(1, 3) .. '.wav')
-
-    if not self:CanPlacePortal(true) then
-        self:DispatchSparkEffect()
-
-        return
-    end
-
-    self.LastPortal = true
-    self:CreateShootEffect(true)
-    self:FirePortal(true)
-end
-
-function SWEP:CreateShootEffect(type)
-    --local owner = (self:GetOwner() ~= NULL) and self:GetOwner() or player.GetAll()[1]
+function SWEP:CreateShootEffect(ptype)
     if SERVER then
-        --local tr
-        --local source
-        --local clr = type == true and Color(255, 150, 0) or Color(0, 150, 255)
         if self:GetOwner() ~= NULL and self:GetOwner():IsPlayer() then
             local vec = Vector(12, -2, -3)
             vec:Rotate(self:GetOwner():EyeAngles())
             source = self:GetOwner():GetShootPos() + vec
-
-            tr = util.TraceLine({
-                start = self:GetOwner():EyePos(),
-                endpos = self:GetOwner():EyePos() + (self:GetOwner():EyeAngles():Forward()) * 30000,
-                filter = PortalTrace,
-                mask = MASK_SHOT_PORTAL
-            })
-        else
-            tr = util.TraceLine({
-                start = self:GetPos(),
-                endpos = self:GetPos() + (-self:GetAngles():Forward()) * 30000,
-                filter = PortalTrace
-            })
         end
     end
 end
 
-function SWEP:CanPlacePortal(type)
-    local pass = true
-
-    --local tr
-    if self:GetOwner() ~= NULL and self:GetOwner():IsPlayer() then
-        --tr = self:GetOwner():GetEyeTraceNoCursor()
-        tr = util.TraceLine({
-            start = self:GetOwner():EyePos(),
-            endpos = self:GetOwner():EyePos() + (self:GetOwner():EyeAngles():Forward()) * 30000,
-            filter = PortalTrace,
-            mask = MASK_SHOT_PORTAL
-        })
-    else
-        tr = util.TraceLine({
-            start = self:GetPos(),
-            endpos = self:GetPos() + (-self:GetAngles():Forward()) * 30000,
-            filter = PortalTrace
-        })
-    end
-
+function SWEP:CanPlacePortal(ptype)
+    local tr = TraceHit(self)
     local ang = tr.HitNormal:Angle()
     local r = ang:Right()
     local f = ang:Forward()
@@ -282,53 +200,29 @@ function SWEP:CanPlacePortal(type)
     local size = tr.Entity ~= NULL and (tr.Entity:OBBMaxs() - tr.Entity:OBBMins()):Length() or 0
     local portalsize = 134
 
-    if size < portalsize and not tr.Entity:IsWorld() then
-        pass = false
+    if size < portalsize and not tr.Entity:IsWorld() then return false end
+
+    if IsValid(tr.Entity) then
+        if tr.Entity:GetNWBool('Portalmod_InvalidSurface') then return false end
+            
+        if string.sub(tr.Entity:GetClass(), 1, 4) == 'sent' then return false end
+        
+        if tr.Entity:IsNPC() then return false end
+        
+        if table.HasValue(self.BadSurfaces, tr.Entity:GetClass()) then return false end
+        
+        if tr.Entity:GetNWBool('INVALID_SURFACE') then return false end
     end
+
+    if tr.MatType == MAT_GLASS or tr.HitSky then return false end
 
     for i, v in pairs(ents.FindInBox(p + (r * 33 + u * 76 + f * 5), p - (r * 33 + u * 76))) do
-        if v:GetClass() == 'portalgun_portal_red' and type == false or v:GetClass() == 'portalgun_portal_blue' and type == true then
-            pass = false
-        end
-
-        if v:GetClass() == 'portalgun_portal_atlas2' and type == false or v:GetClass() == 'portalgun_portal_atlas1' and type == true then
-            pass = false
-        end
-
-        if v:GetClass() == 'portalgun_portal_pbody2' and type == false or v:GetClass() == 'portalgun_portal_pbody1' and type == true then
-            pass = false
+        if v:GetClass() == 'portalgun_portal' and ptype != v:GetNWBool('PORTALTYPE') then
+            return false
         end
     end
 
-    if IsValid(tr.Entity) and tr.Entity:GetNWBool('Portalmod_InvalidSurface') then
-        pass = false
-    end
-
-    if IsValid(tr.Entity) and string.sub(tr.Entity:GetClass(), 1, 4) == 'sent' then
-        pass = false
-    end
-
-    if IsValid(tr.Entity) and tr.Entity:IsNPC() then
-        pass = false
-    end
-
-    if IsValid(tr.Entity) and table.HasValue(self.BadSurfaces, tr.Entity:GetClass()) then
-        pass = false
-    end
-
-    if IsValid(tr.Entity) and tr.Entity:GetNWBool('INVALID_SURFACE') then
-        pass = false
-    end
-
-    if tr.MatType == MAT_GLASS then
-        pass = false
-    end
-
-    if tr.HitSky then
-        pass = false
-    end
-
-    return pass
+    return true
 end
 
 function SWEP:Think()
@@ -338,7 +232,7 @@ function SWEP:Think()
 
         -- HOLDING FUNC
         if IsValid(self.HoldenProp) then
-            tr = util.TraceLine({
+            local tr = util.TraceLine({
                 start = self:GetOwner():EyePos(),
                 endpos = self:GetOwner():EyePos() + self:GetOwner():EyeAngles():Forward() * 70,
                 filter = {self:GetOwner(), self.HoldenProp}
@@ -354,7 +248,7 @@ function SWEP:Think()
             local ply = self:GetOwner()
             self.NextAllowedPickup = CurTime() + 0.4
 
-            tr = util.TraceLine({
+            local tr = util.TraceLine({
                 start = ply:EyePos(),
                 endpos = ply:EyePos() + ply:EyeAngles():Forward() * 150,
                 filter = ply
@@ -379,7 +273,7 @@ function SWEP:PortalGunValid(v)
     local portal = v:GetLinkedPortal()
     if not IsValid(portal) then return true end -- no portal - can't pickup
 
-    tr = util.TraceLine({
+    local tr = util.TraceLine({
         start = portal:GetPos(),
         endpos = portal:GetPos() - portal:GetAngles():Forward() * (150 * distprec) - Vector(0, 0, 35),
         filter = portal
@@ -394,47 +288,32 @@ function SWEP:PortalGunValid(v)
     end
 end
 
-function SWEP:FirePortal(type)
+function SWEP:FirePortal(ptype)
     local ent
     local owner = (self:GetOwner() ~= NULL) and self:GetOwner() or player.GetAll()[1]
 
     if SERVER then
-        --local tr
-        if self:GetOwner() ~= NULL and self:GetOwner():IsPlayer() then
-            tr = util.TraceLine({
-                start = self:GetOwner():EyePos(),
-                endpos = self:GetOwner():EyePos() + (self:GetOwner():EyeAngles():Forward()) * 30000,
-                filter = PortalTrace,
-                mask = MASK_SHOT_PORTAL
-            })
-        else
-            tr = util.TraceLine({
-                start = self:GetPos(),
-                endpos = self:GetPos() + (-self:GetAngles():Forward()) * 30000,
-                filter = PortalTrace
-            })
-        end
-
+        local tr = TraceHit(self)
+        local pos = tr.HitPos
         local hitAng = tr.HitNormal:Angle()
         local right = hitAng:Right() * 30
-        local u = hitAng:Up() * 50
+        local up = hitAng:Up() * 50
+        local fwd = hitAng:Forward()
 
         -- Prevent portals from spawning inside each other
-        for i, v in pairs(ents.FindInBox(tr.HitPos + (right + u + hitAng:Forward()), tr.HitPos - (right + u))) do
+        for i, v in pairs(ents.FindInBox(pos + (right + up + hitAng:Forward()), pos - (right + up))) do
             if IsValid(v) and v ~= self and v ~= self.ParentEntity and v:GetClass() == 'portalgun_portal' then
                 -- Another portal blocks except when it's being replaced by this new one
-                local getsReplaced = v.RealOwner == owner and v:GetNWBool('PORTALTYPE') == type
+                local getsReplaced = v.RealOwner == owner and v:GetNWBool('PORTALTYPE') == ptype
 
                 if not getsReplaced then
                     self:DispatchSparkEffect()
-
                     return
                 end
             end
         end
 
-        --mask
-        local portalpos = tr.HitPos
+        local portalpos = pos
         local portalang
         local ownerent = tr.Entity
 
@@ -446,69 +325,41 @@ function SWEP:FirePortal(type)
             portalang = tr.HitNormal:Angle() - Angle(180, 0, 0)
         end
 
-        local tr_up = util.TraceLine({
-            start = tr.HitPos,
-            endpos = tr.HitPos + u,
-            filter = ent
-        })
+        -- Traces a line from the hit position to a relative offset
+        local function TraceRelative(off)
+            return util.TraceLine({
+                start = pos,
+                endpos = pos + off
+            })
+        end
 
-        local tr_down = util.TraceLine({
-            start = tr.HitPos,
-            endpos = tr.HitPos - u,
-            filter = ent
-        })
+        local tr_up = TraceRelative(up)
+        local tr_down = TraceRelative(-up)
+        local tr_left = TraceRelative(right)
+        local tr_right = TraceRelative(-right)
 
-        local tr_left = util.TraceLine({
-            start = tr.HitPos,
-            endpos = tr.HitPos + right,
-            filter = ent
-        })
+        -- Checks if one side of the portal will be off a flat surface
+        local function NotFlat(off)
+            local delta = pos + off
+            return not util.TraceLine({
+                start = delta,
+                endpos = delta - fwd
+            }).Hit
+        end
 
-        local tr_right = util.TraceLine({
-            start = tr.HitPos,
-            endpos = tr.HitPos - right,
-            filter = ent
-        })
-
-        --
-        u = hitAng:Up() * 48
-
-        local tr_right_pl = util.TraceLine({
-            start = tr.HitPos - right,
-            endpos = (tr.HitPos - right) - (tr.HitNormal:Angle():Forward() * 1),
-            filter = ent
-        })
-
-        local tr_left_pl = util.TraceLine({
-            start = tr.HitPos + right,
-            endpos = (tr.HitPos + right) - (tr.HitNormal:Angle():Forward() * 1),
-            filter = ent
-        })
-
-        local tr_top_pl = util.TraceLine({
-            start = tr.HitPos + u,
-            endpos = (tr.HitPos + u) - (tr.HitNormal:Angle():Forward() * 1),
-            filter = ent
-        })
-
-        local tr_bot_pl = util.TraceLine({
-            start = tr.HitPos - u,
-            endpos = (tr.HitPos - u) - (tr.HitNormal:Angle():Forward() * 1),
-            filter = ent
-        })
-
-        if tr_up.Hit and tr_down.Hit or tr_left.Hit and tr_right.Hit or not tr_right_pl.Hit or not tr_left_pl.Hit or not tr_bot_pl.Hit or not tr_top_pl.Hit then
+        -- Abort if the portal will not be on a flat surface
+        up = hitAng:Up() * 48
+        if (tr_up.Hit and tr_down.Hit) or (tr_left.Hit and tr_right.Hit) or NotFlat(-right) or NotFlat(right) or NotFlat(up) or NotFlat(-up) then
             self:DispatchSparkEffect()
-
             return
         end
 
         ent = ents.Create('portalgun_portal')
-        ent:SetNWBool('PORTALTYPE', type)
+        ent:SetNWBool('PORTALTYPE', ptype)
         local ang = tr.HitNormal:Angle() - Angle(90, 0, 0)
         local coords = Vector(35, 35, 25)
         coords:Rotate(ang)
-        u = tr.HitNormal:Angle():Up() * 50
+        up = tr.HitNormal:Angle():Up() * 50
         local lr_fract = Vector(0, 0, 0)
         local ud_fract = Vector(0, 0, 0)
 
@@ -519,20 +370,20 @@ function SWEP:FirePortal(type)
         end
 
         if tr_up.Hit then
-            ud_fract = u * (1 - tr_up.Fraction)
+            ud_fract = up * (1 - tr_up.Fraction)
         elseif tr_down.Hit then
-            ud_fract = -u * (1 - tr_down.Fraction)
+            ud_fract = -up * (1 - tr_down.Fraction)
         end
 
         ent:SetPos(portalpos - lr_fract - ud_fract)
 
-        for i, v in pairs(ents.FindInBox(tr.HitPos + coords, tr.HitPos - coords)) do
+        for i, v in pairs(ents.FindInBox(pos + coords, pos - coords)) do
             if table.HasValue(self.BumpProps, v:GetModel()) then
                 ent:SetPos(v:GetPos())
                 ownerent = v
                 portalang = v:GetAngles() - Angle(180, 0, 0)
 
-                if type then
+                if ptype then
                     v:SetSkin(2)
                 else
                     v:SetSkin(1)
@@ -558,9 +409,9 @@ function SWEP:FirePortal(type)
 
         ent:SetNWEntity('portalowner', owner)
         --ent:UpdateEntityData()
-        self:RemoveSelectedPortal(type) -- remove old portal
+        self:RemoveSelectedPortal(ptype) -- remove old portal
 
-        if (type) then
+        if (ptype) then
             owner:SetNWEntity('PORTALGUN_PORTALS_RED', ent)
         else
             owner:SetNWEntity('PORTALGUN_PORTALS_BLUE', ent)
@@ -570,13 +421,13 @@ function SWEP:FirePortal(type)
             net.Start('PORTALGUN_SHOOT_PORTAL')
             net.WriteEntity(owner)
             net.WriteEntity(ent)
-            net.WriteFloat((type == true) and 1 or 0)
+            net.WriteFloat((ptype == true) and 1 or 0)
             net.Send(player.GetAll())
         end
     end
 
     if CLIENT then
-        if (type) then
+        if (ptype) then
             local p1 = owner:GetNWEntity('PORTALGUN_PORTALS_RED', ent)
 
             if IsValid(p1) then
@@ -592,13 +443,13 @@ function SWEP:FirePortal(type)
     end
 end
 
-function SWEP:RemoveSelectedPortal(type)
+function SWEP:RemoveSelectedPortal(ptype)
     local owner = (self:GetOwner() ~= NULL) and self:GetOwner() or player.GetAll()[1]
 
     for i, v in pairs(ents.GetAll()) do
-        if IsValid(v) and type == true and owner:GetNWEntity('PORTALGUN_PORTALS_RED') == v then
+        if IsValid(v) and ptype == true and owner:GetNWEntity('PORTALGUN_PORTALS_RED') == v then
             SafeRemoveEntity(v)
-        elseif IsValid(v) and type == false and owner:GetNWEntity('PORTALGUN_PORTALS_BLUE') == v then
+        elseif IsValid(v) and ptype == false and owner:GetNWEntity('PORTALGUN_PORTALS_BLUE') == v then
             SafeRemoveEntity(v)
         end
     end
@@ -635,37 +486,18 @@ end
 function SWEP:AcceptInput(input, activator, called, data)
     if input == 'FirePortal1' then
         self:PrimaryAttack()
-    end
-
-    if input == 'FirePortal2' then
+    elseif input == 'FirePortal2' then
         self:SecondaryAttack()
     end
 end
 
 function SWEP:KeyValue(k, v)
     if k == 'CanFirePortal1' then
-        if v == '1' then
-            self.CanFirePortal1 = true
-
-            return
-        end
-
-        self.CanFirePortal1 = false
+        self.CanFirePortal1 = v == '1'
+    
+    elseif k == 'CanFirePortal2' then
+        self.CanFirePortal2 = v == '1'
     end
-
-    if k == 'CanFirePortal2' then
-        if v == '1' then
-            self.CanFirePortal2 = true
-
-            return
-        end
-
-        self.CanFirePortal2 = false
-    end
-end
-
-function SWEP:Holster(wep)
-    return true
 end
 
 function SWEP:PlayFizzleAnimation()
