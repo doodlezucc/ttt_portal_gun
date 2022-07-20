@@ -3,7 +3,7 @@
 -- WRITEN BY WHEATLEY AND JULIAN7752
 -- ------------------------------------------------------------------------
 AddCSLuaFile()
--- // TTT Convertion Code \\
+
 SWEP.Base = 'weapon_tttbase'
 SWEP.Kind = WEAPON_EQUIP1
 
@@ -15,14 +15,13 @@ SWEP.AllowDrop = true
 SWEP.IsSilent = false
 SWEP.NoSights = true
 
--- // TTT Convertion Code \\
 if CLIENT then
     -- Path to the icon material
     SWEP.Icon = 'vgui/ttt/pg_wall' -- Text shown in the equip menu
 
     SWEP.EquipMenuData = {
         type = 'Weapon',
-        desc = 'portal gun go brrr'
+        desc = 'Makes holes. Not bullet holes.'
     }
 end
 
@@ -95,6 +94,24 @@ if SERVER then
     end)
 end
 
+local function IsPickable(ent)
+    if IsValid(ent) then
+        local phys = ent:GetPhysicsObject()
+        if IsValid(phys) then
+            return phys:GetMass() <= 35
+        end
+    end
+
+    return false
+end
+
+hook.Add('AllowPlayerPickup', 'DisallowPickup', function(ply, ent)
+    local hasgun = IsValid(ply:GetActiveWeapon()) and ply:GetActiveWeapon():GetClass() == 'weapon_portalgun'
+    if hasgun and not IsPickable(ent) then return false end
+
+    return true
+end)
+
 -- Tell Gmod to render all objects visible from any portal
 hook.Add('SetupPlayerVisibility', 'PORTALGUN_PORTAL_SETUPVIS', function(ply, ent)
     for _, v in pairs(ents.GetAll()) do
@@ -112,14 +129,22 @@ function SWEP:Holster(wep)
     return true
 end
 
-local function HitWorldOnly() return false end
+local function PortalTraceFilter(ent)
+    if IsValid(ent) then
+        if ent:IsPlayer() then return false end -- players
+        if ent:IsWeapon() then return false end
+        if IsPickable(ent) then return false end -- some props
+    end
+
+    return true
+end
 
 local function PortalTrace(data)
     return util.TraceLine({
         start = data.start,
         endpos = data.endpos,
         mask = data.mask,
-        filter = HitWorldOnly
+        filter = PortalTraceFilter
     })
 end
 
@@ -262,7 +287,7 @@ function SWEP:Think()
                 if string.find(v:GetClass(), 'portalgun_portal_') and PortalGunValid(v) then return end
             end
 
-            self:EmitSound('player/object_use_failure_01.wav')
+            self:EmitSound('common/wpn_select.wav')
             self:SendWeaponAnim(ACT_VM_DRYFIRE)
         end
     end
@@ -501,7 +526,7 @@ function SWEP:KeyValue(k, v)
 end
 
 function SWEP:PlayFizzleAnimation()
-    self:EmitSound('weapon_ambient/wpn_portal_fizzler_shimmy_01.wav')
+    self:EmitSound('weapons/portalgun/portal_fizzle_0' .. math.random(1, 2) .. '.wav')
     self:SendWeaponAnim(ACT_VM_DRYFIRE)
 end
 
