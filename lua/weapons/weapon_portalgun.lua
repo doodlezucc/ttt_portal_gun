@@ -107,7 +107,7 @@ end
 
 hook.Add('AllowPlayerPickup', 'DisallowPickup', function(ply, ent)
     local hasgun = IsValid(ply:GetActiveWeapon()) and ply:GetActiveWeapon():GetClass() == 'weapon_portalgun'
-    if hasgun and not IsPickable(ent) then return false end
+    if not hasgun or not IsPickable(ent) then return false end
 
     return true
 end)
