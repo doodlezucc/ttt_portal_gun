@@ -29,6 +29,8 @@ if SERVER then
     resource.AddFile('materials/vgui/ttt/pg_wall.vmt')
 end
 
+CreateConVar('portalmod_shot_mask', tostring(MASK_SHOT_PORTAL), {FCVAR_NOTIFY, FCVAR_ARCHIVE})
+
 -- //TTT Convertion Code \\
 SWEP.Author = 'Wheatley, Port by Julian7752, Version 2.0 by Zu, Fixed by doodlezucc'
 SWEP.Purpose = 'Makes holes. Not bullet holes.'
@@ -152,10 +154,12 @@ local function TraceHit(gun)
     local owner = gun:GetOwner()
 
     if owner ~= NULL and owner:IsPlayer() then
+        local maskString = GetConVar('portalmod_shot_mask'):GetString()
+
         return PortalTrace({
             start = owner:EyePos(),
             endpos = owner:EyePos() + (owner:EyeAngles():Forward()) * 30000,
-            mask = MASK_SHOT_PORTAL
+            mask = tonumber(maskString)
         })
     else
         return PortalTrace({
