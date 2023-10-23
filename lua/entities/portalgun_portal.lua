@@ -313,6 +313,7 @@ end
 
 function ENT:TeleportEntityToPortal(ent, portal)
     if CLIENT then return end
+    if ent:IsSpec() or SpecDM and (ent.IsGhost and ent:IsGhost()) then return end
     local volume = 1
 
     if (not ent:IsPlayer()) then
