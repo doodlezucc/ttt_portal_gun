@@ -96,17 +96,18 @@ function ENT:OnRemove()
 end
 
 function ENT:GetLinkedPortal()
-    local type = self:GetNWBool('PORTALTYPE')
-    local e
-
-    if type then
-        e = self:GetNWEntity('portalowner'):GetNWEntity('PORTALGUN_PORTALS_BLUE')
-    else
-        e = self:GetNWEntity('portalowner'):GetNWEntity('PORTALGUN_PORTALS_RED')
+    local portal_owner = self:GetNWEntity('portalowner')
+    
+    if IsValid(portal_owner) then
+        local type = self:GetNWBool('PORTALTYPE')
+        local is_this_red = (type == true)
+    
+        if is_this_red then
+            return portal_owner:GetNWEntity('PORTALGUN_PORTALS_BLUE')
+        else
+            return portal_owner:GetNWEntity('PORTALGUN_PORTALS_RED')
+        end
     end
-    -- local tp = type and 'PORTALGUN_PORTALS_BLUE' or 'PORTALGUN_PORTALS_RED'
-
-    return e
 end
 
 function ENT:Draw()

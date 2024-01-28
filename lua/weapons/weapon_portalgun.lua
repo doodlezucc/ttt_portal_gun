@@ -446,13 +446,11 @@ function SWEP:FirePortal(ptype)
             owner:SetNWEntity('PORTALGUN_PORTALS_BLUE', ent)
         end
 
-        if SERVER then
-            net.Start('PORTALGUN_SHOOT_PORTAL')
-            net.WriteEntity(owner)
-            net.WriteEntity(ent)
-            net.WriteFloat((ptype == true) and 1 or 0)
-            net.Send(player.GetAll())
-        end
+        net.Start('PORTALGUN_SHOOT_PORTAL')
+        net.WriteEntity(owner)
+        net.WriteEntity(ent)
+        net.WriteFloat((ptype == true) and 1 or 0)
+        net.Send(player.GetAll())
     end
 
     if CLIENT then
